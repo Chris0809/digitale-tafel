@@ -213,7 +213,11 @@
 
     body {
       font-family: var(--font-body);
-      background: var(--paper);
+      background:
+        linear-gradient(to top, var(--green-100) 0%, transparent 30%),
+        radial-gradient(130% 90% at 50% -15%, var(--green-50) 0%, var(--paper) 58%),
+        var(--paper);
+      background-attachment: fixed;
       color: var(--ink);
       min-height: 100dvh;
       display: flex;
@@ -223,47 +227,6 @@
       overflow: hidden;
       user-select: none;
     }
-
-    /* ─── Kulissen (umschaltbar) ────────────────────────────── */
-    .scene-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; transition: background .45s ease; }
-    .scene-bg .ground { position: absolute; left: 0; right: 0; bottom: 0; height: 40%; transition: background .45s ease; }
-
-    /* Neutral – ganzjährig, ruhig */
-    body.scene-neutral .scene-bg { background: radial-gradient(130% 90% at 50% -15%, var(--green-50) 0%, var(--paper) 58%), var(--paper); }
-    body.scene-neutral .ground   { background: linear-gradient(to top, var(--green-100), transparent); }
-
-    /* Frühling / Wiese */
-    body.scene-fruehling .scene-bg { background: linear-gradient(to bottom, #DCEFFB 0%, #EAF6E0 52%, #E7F2DE 100%); }
-    body.scene-fruehling .ground   {
-      height: 44%;
-      background:
-        radial-gradient(circle at 12% 92%, rgba(242,145,47,.5) 0 5px, transparent 6px),
-        radial-gradient(circle at 20% 96%, rgba(46,134,199,.45) 0 4px, transparent 5px),
-        radial-gradient(circle at 84% 90%, rgba(242,145,47,.5) 0 5px, transparent 6px),
-        radial-gradient(circle at 92% 95%, rgba(213,35,35,.4) 0 4px, transparent 5px),
-        linear-gradient(to top, #BCE39A, #9CCD79 38%, transparent);
-    }
-
-    /* Herbst */
-    body.scene-herbst .scene-bg { background: linear-gradient(to bottom, #FBE9D0 0%, #F7E0BC 52%, #F3D7A6 100%); }
-    body.scene-herbst .ground   {
-      height: 42%;
-      background:
-        radial-gradient(circle at 14% 90%, rgba(168,89,16,.4) 0 6px, transparent 7px),
-        radial-gradient(circle at 88% 92%, rgba(217,121,28,.45) 0 6px, transparent 7px),
-        linear-gradient(to top, #E8A24E, #F2B66A 42%, transparent);
-    }
-
-    /* Winter */
-    body.scene-winter .scene-bg {
-      background:
-        radial-gradient(circle at 22% 28%, rgba(255,255,255,.9) 0 3px, transparent 4px),
-        radial-gradient(circle at 68% 18%, rgba(255,255,255,.8) 0 2px, transparent 3px),
-        radial-gradient(circle at 82% 40%, rgba(255,255,255,.85) 0 3px, transparent 4px),
-        radial-gradient(circle at 40% 22%, rgba(255,255,255,.7) 0 2px, transparent 3px),
-        linear-gradient(to bottom, #EAF3FB 0%, #F2F7FC 52%, #FAFCFE 100%);
-    }
-    body.scene-winter .ground { height: 40%; background: linear-gradient(to top, #CFE3F2, #E4EFF8 45%, transparent); }
 
     /* ─── Großer Pepe, zeigt auf das Wort ───────────────────── */
     .pepe-char {
@@ -518,6 +481,21 @@
     .field input:focus, .field textarea:focus { border-color: var(--green-500); box-shadow: var(--focus-ring); }
     .field textarea { min-height: 200px; line-height: 1.7; resize: vertical; }
 
+    /* Themen-Paket-Auswahl */
+    .bucket-row { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
+    .bucket-row select {
+      flex: 1; min-width: 160px;
+      font-family: var(--font-body); font-size: var(--fs-body-m); color: var(--ink);
+      background: var(--white);
+      border: var(--border-w) solid var(--line-strong);
+      border-radius: var(--radius-md);
+      padding: var(--space-3) var(--space-4);
+      outline: none; cursor: pointer;
+    }
+    .bucket-row select:focus { border-color: var(--green-500); box-shadow: var(--focus-ring); }
+    .btn-txt { padding: 5px 14px; font-size: var(--fs-body-s); border: 1.5px solid var(--line-strong); box-shadow: none; }
+    .btn-txt:hover:not(:disabled) { background: var(--green-50); }
+
     .help {
       margin-top: var(--space-2);
       font-size: var(--fs-body-s); color: var(--ink-soft); line-height: 1.5;
@@ -540,9 +518,8 @@
     }
   </style>
 </head>
-<body class="scene-neutral">
+<body>
 
-<div class="scene-bg" aria-hidden="true"><div class="ground"></div></div>
 <div class="pepe-char" role="img" aria-label="Pepe zeigt auf das Wort"></div>
 
 <div class="topbar">
@@ -589,10 +566,10 @@
     <div class="pill">
       <label>Tempo</label>
       <select id="speed">
-        <option value="2500">Langsam</option>
-        <option value="1500" selected>Normal</option>
-        <option value="900">Schnell</option>
-        <option value="500">Blitz</option>
+        <option value="3800">Langsam</option>
+        <option value="2400" selected>Normal</option>
+        <option value="1500">Schnell</option>
+        <option value="900">Blitz</option>
       </select>
     </div>
     <div class="pill">
@@ -622,22 +599,20 @@
 <!-- Bearbeiten-Overlay -->
 <div class="overlay" id="overlayEdit">
   <div class="panel">
-    <h2>Wörter bearbeiten</h2>
-    <p>Ein Wort pro Zeile. Silben mit Bindestrich trennen – die Farben folgen den Silben.</p>
+    <h2>Wörter &amp; Themen</h2>
+    <p>Lege beliebig viele Themen-Pakete an, gib Wörter ein oder lade eine .txt-Datei. Silben mit Bindestrich trennen – die Farben folgen den Silben.</p>
 
     <div class="field">
-      <label for="editTitle">Thema (Überschrift)</label>
-      <input type="text" id="editTitle" placeholder="z. B. Frühling &amp; Sommer" />
+      <label for="bucketSelect">Thema-Paket</label>
+      <div class="bucket-row">
+        <select id="bucketSelect" onchange="switchBucket(this.value)"></select>
+        <button class="btn btn-secondary" type="button" onclick="newBucket()">+ Neues Thema</button>
+      </div>
     </div>
 
     <div class="field">
-      <label for="editScene">Kulisse</label>
-      <select id="editScene" onchange="applyScene(this.value)" style="width:100%; font-family:var(--font-body); font-size:var(--fs-body-m); color:var(--ink); background:var(--white); border:var(--border-w) solid var(--line-strong); border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); outline:none; cursor:pointer;">
-        <option value="scene-neutral">Neutral (ganzjährig)</option>
-        <option value="scene-fruehling">Frühling / Wiese</option>
-        <option value="scene-herbst">Herbst</option>
-        <option value="scene-winter">Winter</option>
-      </select>
+      <label for="editTitle">Name des Themas</label>
+      <input type="text" id="editTitle" placeholder="z. B. Tiere" />
     </div>
 
     <div class="field">
@@ -645,63 +620,48 @@
       <textarea id="editWords" spellcheck="false" oninput="updateCount()"></textarea>
       <div class="help">
         Beispiel: <span class="ex">Schmet-ter-ling</span> &nbsp; <span class="ex">Son-ne</span> &nbsp; <span class="ex">Fahr-rad</span><br>
-        Ein Wort ohne Bindestrich bekommt einfach eine Farbe.
+        Ein Wort ohne Bindestrich bekommt einfach eine Farbe. &nbsp;
+        <button class="btn btn-ghost btn-txt" type="button" onclick="document.getElementById('txtFile').click()">.txt-Datei laden</button>
+        <input type="file" id="txtFile" accept=".txt,text/plain" onchange="uploadTxt(event)" hidden />
       </div>
       <div class="count-msg" id="countMsg"></div>
     </div>
 
     <div class="panel-actions">
-      <button class="btn btn-primary" onclick="saveEditor()">Speichern</button>
+      <button class="btn btn-primary" onclick="saveEditor()">Speichern &amp; verwenden</button>
       <button class="btn btn-ghost" onclick="closeEditor()">Abbrechen</button>
       <span class="spacer"></span>
-      <button class="btn btn-ghost" onclick="restoreDefault()" title="Auf die Start-Wörter zurücksetzen">Standard wiederherstellen</button>
+      <button class="btn btn-ghost" onclick="deleteBucket()" title="Dieses Thema entfernen">Thema löschen</button>
     </div>
   </div>
 </div>
 
 <script>
 /* ════════════════════════════════════════════════════════════
-   Wortliste – Quellen mit Reihenfolge (zukunftssicher für GitHub):
-   1) words.json  (später per Claude/GitHub gepflegt = Master)
-   2) localStorage (lokal an der Tafel im Bearbeiten-Modus geändert)
-   3) Standardliste (fest eingebaut, falls sonst nichts da ist)
-   Wer lokal bearbeitet, dessen Liste gewinnt (Merker LS_SOURCE),
-   bis er „Standard wiederherstellen" drückt.
+   Wörter sind in Themen-Paketen ("Buckets") organisiert.
+   - Buckets werden lokal gespeichert (localStorage: blitzlesen.buckets.v1).
+   - Erstbefüllung beim allerersten Start aus words.json (sonst Standardliste).
+   - Das aktive Bucket (blitzlesen.aktiv.v1) liefert die Wörter fürs Spiel.
    ════════════════════════════════════════════════════════════ */
 const DEFAULT_TITLE = 'Frühling & Sommer';
 const DEFAULT_WORDS = [
   ['Früh','ling'], ['Fe','ri','en'], ['Schwimm','bad'], ['Kak','tus'], ['Som','mer'],
   ['Blu','me'], ['Schmet','ter','ling'], ['Son','ne'], ['Ur','laub'], ['Fahr','rad'],
 ];
-const LS_WORDS  = 'blitzlesen.woerter.v1';
-const LS_TITLE  = 'blitzlesen.titel.v1';
-const LS_SOURCE = 'blitzlesen.quelle.v1';
-const LS_SCENE  = 'blitzlesen.kulisse.v1';
+const LS_BUCKETS = 'blitzlesen.buckets.v1';   // [{id,name,words:[[..]]}]
+const LS_ACTIVE  = 'blitzlesen.aktiv.v1';     // id des aktiven Themas
 
-const SCENES = ['scene-neutral','scene-fruehling','scene-herbst','scene-winter'];
 let words = DEFAULT_WORDS.slice();
 let titel = DEFAULT_TITLE;
-let scene = 'scene-neutral';
-let sceneFromJson = null;
 
-/* — Kulisse setzen / anwenden / laden — */
-function setSceneClass(name) {
-  if (!SCENES.includes(name)) name = 'scene-neutral';
-  scene = name;
-  document.body.classList.remove(...SCENES);
-  document.body.classList.add(name);
-  const sel = document.getElementById('editScene');
-  if (sel) sel.value = name;
-}
-function applyScene(name) {            // Nutzeraktion: anwenden + merken
-  setSceneClass(name);
-  try { localStorage.setItem(LS_SCENE, scene); } catch (e) {}
-}
-function loadScene() {
-  let s = null;
-  try { s = localStorage.getItem(LS_SCENE); } catch (e) {}
-  setSceneClass(s || sceneFromJson || 'scene-neutral');
-}
+/* — Themen-Pakete (Buckets) — */
+let buckets     = [];     // alle gespeicherten Themen
+let activeId    = null;   // aktives Thema (fürs Spiel)
+let workBuckets = [];     // Arbeitskopie, solange der Dialog offen ist
+let editingId   = null;   // im Dialog gerade bearbeitetes Thema
+
+const uid = () => 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const makeBucket = (name, ws) => ({ id: uid(), name: (name || 'Neues Thema'), words: (ws || []).map(w => w.slice()) });
 
 /* — Hilfsfunktionen Silben/Text — */
 const syllablesFromLine = line => line.split('-').map(s => s.trim()).filter(Boolean);
@@ -716,39 +676,43 @@ function normalizeWords(raw) {
     .filter(w => w.length);
 }
 
-/* — Quellen laden — */
-function loadFromLocal() {
+/* — Speichern / Laden der Themen — */
+function persistBuckets() {
   try {
-    const raw = localStorage.getItem(LS_WORDS);
+    localStorage.setItem(LS_BUCKETS, JSON.stringify(buckets));
+    localStorage.setItem(LS_ACTIVE, activeId || '');
+  } catch (e) {}
+}
+function loadBuckets() {
+  try {
+    const raw = localStorage.getItem(LS_BUCKETS);
     if (!raw) return false;
-    const w = normalizeWords(JSON.parse(raw));
-    if (!w.length) return false;
-    words = w;
-    titel = localStorage.getItem(LS_TITLE) || DEFAULT_TITLE;
+    const b = JSON.parse(raw);
+    if (!Array.isArray(b) || !b.length) return false;
+    buckets = b.map(x => ({ id: x.id || uid(), name: x.name || 'Thema', words: normalizeWords(x.words) }))
+               .filter(x => x.words.length);
+    if (!buckets.length) return false;
+    activeId = localStorage.getItem(LS_ACTIVE);
+    if (!buckets.find(x => x.id === activeId)) activeId = buckets[0].id;
     return true;
   } catch (e) { return false; }
 }
-async function loadFromJson() {
+async function seedWords() {            // Erstbefüllung: words.json, sonst Standard
   try {
     const r = await fetch('words.json', { cache: 'no-store' });
-    if (!r.ok) return false;
-    const data = await r.json();
-    sceneFromJson = data.kulisse || data.scene || null;
-    const w = normalizeWords(data.woerter || data.words || data);
-    if (!w.length) return false;
-    words = w;
-    titel = data.titel || data.title || DEFAULT_TITLE;
-    try { localStorage.setItem(LS_WORDS, JSON.stringify(words)); localStorage.setItem(LS_TITLE, titel); } catch (e) {}
-    return true;
-  } catch (e) { return false; }
+    if (r.ok) {
+      const data = await r.json();
+      const w = normalizeWords(data.woerter || data.words || data);
+      if (w.length) return { name: data.titel || data.title || DEFAULT_TITLE, words: w };
+    }
+  } catch (e) {}
+  return { name: DEFAULT_TITLE, words: DEFAULT_WORDS.map(w => w.slice()) };
 }
-async function loadWords() {
-  const localFirst = localStorage.getItem(LS_SOURCE) === 'local';
-  if (localFirst && loadFromLocal()) return;
-  if (await loadFromJson()) return;
-  if (loadFromLocal()) return;
-  words = DEFAULT_WORDS.slice();
-  titel = DEFAULT_TITLE;
+function applyActive() {                // aktives Thema → Spiel
+  const b = buckets.find(x => x.id === activeId) || buckets[0];
+  if (!b) { words = DEFAULT_WORDS.slice(); titel = DEFAULT_TITLE; return; }
+  words = b.words.map(w => w.slice());
+  titel = b.name;
 }
 
 /* ── Sequenz-Generator (Gespenster einstreuen) ─────────────── */
@@ -828,47 +792,94 @@ function reset() {
   overlayDone.classList.remove('show');
 }
 
-/* ════════════════ Bearbeiten-Modus ════════════════════════ */
+/* ════════════════ Bearbeiten-Modus: Themen-Pakete ═════════ */
+const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
 function openEditor() {
-  $('editTitle').value = titel;
-  $('editScene').value = scene;
-  $('editWords').value = wordsToText(words);
-  updateCount();
+  workBuckets = buckets.map(b => ({ id: b.id, name: b.name, words: b.words.map(w => w.slice()) }));
+  if (!workBuckets.length) workBuckets = [ makeBucket(DEFAULT_TITLE, DEFAULT_WORDS) ];
+  editingId = workBuckets.find(b => b.id === activeId) ? activeId : workBuckets[0].id;
+  rebuildBucketSelect();
+  loadBucketIntoFields(editingId);
   $('overlayEdit').classList.add('show');
   $('editWords').focus();
 }
 function closeEditor() { $('overlayEdit').classList.remove('show'); }
+
+function rebuildBucketSelect() {
+  const sel = $('bucketSelect');
+  sel.innerHTML = workBuckets.map(b => `<option value="${b.id}">${escapeHtml(b.name || 'Thema')}</option>`).join('');
+  sel.value = editingId;
+}
+function loadBucketIntoFields(id) {
+  const b = workBuckets.find(x => x.id === id) || workBuckets[0];
+  if (!b) return;
+  editingId = b.id;
+  $('editTitle').value = b.name;
+  $('editWords').value = wordsToText(b.words);
+  $('bucketSelect').value = b.id;
+  updateCount();
+}
+function commitFields() {                 // Eingaben ins gerade bearbeitete Thema sichern
+  const b = workBuckets.find(x => x.id === editingId);
+  if (!b) return;
+  b.name = $('editTitle').value.trim() || 'Thema';
+  b.words = parseTextarea($('editWords').value);
+}
+function switchBucket(id) {                // Auswahl im Dropdown
+  commitFields();
+  rebuildBucketSelect();
+  loadBucketIntoFields(id);
+}
+function newBucket() {
+  commitFields();
+  const b = makeBucket('Neues Thema', []);
+  workBuckets.push(b);
+  editingId = b.id;
+  rebuildBucketSelect();
+  loadBucketIntoFields(b.id);
+  $('editTitle').focus(); $('editTitle').select();
+}
+function deleteBucket() {
+  if (workBuckets.length <= 1) {           // letztes Thema: leeren statt entfernen
+    const b = workBuckets[0];
+    b.name = DEFAULT_TITLE; b.words = DEFAULT_WORDS.map(w => w.slice());
+  } else {
+    const i = Math.max(0, workBuckets.findIndex(x => x.id === editingId));
+    workBuckets.splice(i, 1);
+    editingId = workBuckets[Math.max(0, i - 1)].id;
+  }
+  rebuildBucketSelect();
+  loadBucketIntoFields(editingId);
+}
+function uploadTxt(ev) {                    // .txt in das aktuelle Thema laden
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    $('editWords').value = String(reader.result || '');
+    const cur = $('editTitle').value.trim();
+    if (!cur || cur === 'Neues Thema') $('editTitle').value = file.name.replace(/\.[^.]+$/, '');
+    updateCount();
+  };
+  reader.readAsText(file, 'utf-8');
+  ev.target.value = '';                     // gleiche Datei erneut wählbar
+}
 function updateCount() {
   const ws = parseTextarea($('editWords').value);
   const el = $('countMsg');
-  if (!ws.length) { el.textContent = 'Noch keine Wörter – bitte mindestens eines eingeben.'; el.className = 'count-msg count-warn'; }
-  else { el.textContent = `${ws.length} ${ws.length === 1 ? 'Wort' : 'Wörter'} bereit.`; el.className = 'count-msg count-ok'; }
+  if (!ws.length) { el.textContent = 'Noch keine Wörter – bitte eines eingeben oder eine .txt laden.'; el.className = 'count-msg count-warn'; }
+  else { el.textContent = `${ws.length} ${ws.length === 1 ? 'Wort' : 'Wörter'} in diesem Thema.`; el.className = 'count-msg count-ok'; }
 }
 function saveEditor() {
-  const ws = parseTextarea($('editWords').value);
-  if (!ws.length) { updateCount(); return; }
-  words = ws;
-  titel = $('editTitle').value.trim();
-  try {
-    localStorage.setItem(LS_WORDS, JSON.stringify(words));
-    localStorage.setItem(LS_TITLE, titel);
-    localStorage.setItem(LS_SOURCE, 'local');
-  } catch (e) {}
+  commitFields();
+  const cleaned = workBuckets.filter(b => b.words.length);
+  if (!cleaned.length) { updateCount(); return; }
+  buckets  = cleaned;
+  activeId = cleaned.find(b => b.id === editingId) ? editingId : cleaned[0].id;
+  persistBuckets();
+  applyActive();
   closeEditor();
-  refreshChrome();
-  reset();
-}
-function restoreDefault() {
-  try {
-    localStorage.removeItem(LS_WORDS); localStorage.removeItem(LS_TITLE);
-    localStorage.removeItem(LS_SOURCE); localStorage.removeItem(LS_SCENE);
-  } catch (e) {}
-  words = DEFAULT_WORDS.slice();
-  titel = DEFAULT_TITLE;
-  setSceneClass('scene-neutral');
-  $('editTitle').value = titel;
-  $('editWords').value = wordsToText(words);
-  updateCount();
   refreshChrome();
   reset();
 }
@@ -880,8 +891,13 @@ document.addEventListener('keydown', e => {
 
 /* ── Start ─────────────────────────────────────────────────── */
 (async function init() {
-  await loadWords();
-  loadScene();
+  if (!loadBuckets()) {
+    const seed = await seedWords();
+    buckets = [ makeBucket(seed.name, seed.words) ];
+    activeId = buckets[0].id;
+    persistBuckets();
+  }
+  applyActive();
   refreshChrome();
 })();
 </script>
