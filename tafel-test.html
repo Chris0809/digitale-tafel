@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tafel-Test</title>
+<style>
+:root{
+  --green:#54A535; --green-dark:#2C5E1D; --green-tint:#E7F2DE;
+  --orange:#F2912F; --blue:#2E86C7; --blue-dark:#16517E;
+  --paper:#FBF6EC; --white:#FFFFFF; --sand:#F3E9D6; --line:#E4DCCB;
+  --ink:#2C2A26; --ink-soft:#5A554C;
+  --red:#C0392B; --red-tint:#F9E3E0; --yellow:#B8860B; --yellow-tint:#FBF1D6;
+}
+*{box-sizing:border-box;}
+body{margin:0; background:#FBF6EC; color:#2C2A26;
+  font-family:'Fredoka',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  font-size:15px; line-height:1.3; padding:14px;}
+.wrap{max-width:1180px; margin:0 auto;}
+a.back{color:#2E86C7; font-size:14px; text-decoration:none;}
+.head{display:flex; align-items:baseline; gap:10px; margin:6px 0 10px;}
+h1{font-size:22px; color:#54A535; margin:0;}
+.head .sub{color:#5A554C; font-size:13px;}
+.top{background:#FFFFFF; border:1px solid #E4DCCB; border-radius:14px; padding:12px 16px; margin-bottom:10px;
+  box-shadow:0 4px 12px rgba(44,42,38,0.05);}
+.flag{font-size:13px; font-weight:600; color:#A85910; text-transform:uppercase; letter-spacing:.04em;}
+.verdict{font-size:20px; font-weight:600; margin:2px 0 8px;}
+.row{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center;}
+.counts .pill{font-size:14px;}
+.ua{background:#F3E9D6; border-radius:8px; padding:8px 10px; font-family:monospace; font-size:12px;
+  word-break:break-all; color:#2C2A26; margin-top:8px;}
+.dt{color:#8A8170; font-size:12px; margin-top:4px;}
+.move{display:flex; align-items:center; gap:12px; margin:0 0 10px; font-size:13px; color:#5A554C;}
+.box{width:34px; height:34px; border-radius:8px; background:#54A535;}
+.bounce{animation:bounce .9s infinite alternate ease-in-out;}
+@keyframes bounce{from{transform:translateY(0);}to{transform:translateY(-12px);}}
+.spin{background:#2E86C7; animation:spin 2s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:2px 18px;}
+.cell{display:flex; justify-content:space-between; align-items:center; gap:8px;
+  padding:6px 4px; border-bottom:1px solid #E4DCCB;}
+.cell .nm{font-size:14px;}
+.pill{display:inline-block; padding:2px 10px; border-radius:999px; font-weight:600; font-size:13px; white-space:nowrap;}
+.ok{background:#E7F2DE; color:#2C5E1D;}
+.no{background:#F9E3E0; color:#C0392B;}
+.maybe{background:#FBF1D6; color:#B8860B;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0 0 6px;"><a class="back" href="blitzlesen/demo.html">&larr; zurueck zum Blitzlesen</a></p>
+  <div class="head"><h1>Tafel-Test</h1><span class="sub">oeffnen, kurz warten, alles abfotografieren</span></div>
+
+  <div class="top">
+    <div class="flag">Das hier fotografieren</div>
+    <div class="verdict" id="verdict">Test laeuft...</div>
+    <div class="row counts" id="counts"></div>
+    <div class="move">
+      <span class="box bounce"></span><span class="box spin"></span>
+      <span>Bewegen sich die zwei Kaesten? &rarr; Animationen laufen fluessig.</span>
+    </div>
+    <div class="move">
+      <button type="button" onclick="playTone()" style="font-family:inherit;font-weight:600;font-size:14px;padding:6px 16px;border-radius:999px;border:2px solid #2E86C7;background:#fff;color:#16517E;cursor:pointer;">Ton abspielen</button>
+      <span id="soundStatus">Tippen und lauschen &ndash; gibt die Tafel einen Piep aus?</span>
+    </div>
+    <div class="ua" id="ua"></div>
+    <div class="dt" id="dt"></div>
+  </div>
+
+  <div id="grid"></div>
+</div>
+
+<script>
+/* ES5 – damit der Test auch auf sehr alten Browsern etwas anzeigt. */
+(function(){
+  var counts = { ok:0, no:0, maybe:0 };
+  var grid = document.getElementById('grid');
+
+  function updateCounts(){
+    document.getElementById('counts').innerHTML =
+      '<span class="pill ok">' + counts.ok + ' laufen</span>' +
+      '<span class="pill no">' + counts.no + ' fehlen</span>' +
+      '<span class="pill maybe">' + counts.maybe + ' unklar</span>';
+  }
+  function pillHtml(status){
+    var cls = status==='ok'?'ok':(status==='no'?'no':'maybe');
+    var lab = status==='ok'?'läuft':(status==='no'?'läuft NICHT':'unklar');
+    return '<span class="pill '+cls+'">'+lab+'</span>';
+  }
+  function cell(name, status){
+    counts[status]++;
+    var div = document.createElement('div');
+    div.className = 'cell';
+    div.innerHTML = '<span class="nm">'+name+'</span>'+pillHtml(status);
+    grid.appendChild(div);
+    updateCounts();
+  }
+
+  /* Browser-Kennung + Zeit */
+  document.getElementById('ua').innerHTML = navigator.userAgent;
+  try { document.getElementById('dt').innerHTML = 'Getestet: ' + new Date().toLocaleString(); } catch(e){}
+
+  /* CSS-Feature-Test */
+  var probe = document.createElement('div'), s = probe.style;
+  function css(prop, value){
+    if (window.CSS && window.CSS.supports){ try { if (CSS.supports(prop, value)) return true; } catch(e){} }
+    var camel = prop.replace(/-([a-z])/g, function(m,p){ return p.toUpperCase(); });
+    if (camel in s){ try { s[camel] = value; return s[camel] !== ''; } catch(e){ return false; } }
+    return false;
+  }
+  function has(fn){ try { return !!fn(); } catch(e){ return false; } }
+
+  /* — Bildformate (Basis sync, WebP/AVIF async unten) — */
+  cell('PNG / JPEG / GIF', 'ok');
+
+  /* — CSS / Animationen — */
+  cell('CSS-Variablen', css('--x','1')?'ok':'no');
+  cell('min() / clamp()', css('width','min(1px, 2px)')?'ok':'no');
+  cell('CSS @keyframes-Animation', css('animation','x 1s')?'ok':'no');
+  cell('CSS Transform', css('transform','rotate(5deg)')?'ok':'no');
+  cell('Flexbox', css('display','flex')?'ok':'no');
+  cell('CSS Grid', css('display','grid')?'ok':'no');
+
+  /* — JavaScript — */
+  cell('Modernes JS (let/const/Pfeil)', has(function(){ eval('let _a=1;const _b=2;var _f=()=>_a+_b;'); return true; })?'ok':'no');
+  cell('requestAnimationFrame', ('requestAnimationFrame' in window)?'ok':'no');
+  cell('fetch (Daten laden)', ('fetch' in window)?'ok':'no');
+  cell('localStorage', has(function(){ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return true; })?'ok':'no');
+
+  /* — Medien & Schrift — */
+  var video = document.createElement('video');
+  function canPlay(t){ if(!video.canPlayType) return 'maybe'; var r=video.canPlayType(t); return r==='probably'?'ok':(r==='maybe'?'maybe':'no'); }
+  cell('SVG (Vektorgrafik)', (document.createElementNS && document.createElementNS('http://www.w3.org/2000/svg','svg').createSVGRect)?'ok':'maybe');
+  cell('MP4-Video (H.264)', canPlay('video/mp4; codecs="avc1.42E01E"'));
+  cell('Webfonts (FontFace)', (window.FontFace)?'ok':'maybe');
+
+  /* — Bildformate asynchron: WebP & AVIF echt laden — */
+  function testImage(name, dataUri, note){
+    var div = document.createElement('div'); div.className='cell';
+    div.innerHTML = '<span class="nm">'+name+'</span><span class="pill maybe">teste...</span>';
+    grid.appendChild(div);
+    var cellPill = div.getElementsByClassName('pill')[0];
+    var img = new Image(), done=false;
+    function finish(ok){
+      if(done) return; done=true;
+      if(ok){ counts.ok++; cellPill.className='pill ok'; cellPill.innerHTML='läuft'; }
+      else { counts.no++; cellPill.className='pill no'; cellPill.innerHTML='läuft NICHT'; }
+      updateCounts(); finalize();
+    }
+    img.onload=function(){ finish(img.width>0 && img.height>0); };
+    img.onerror=function(){ finish(false); };
+    img.src=dataUri;
+    setTimeout(function(){ finish(false); }, 2500);
+  }
+  testImage('WebP', 'data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=');
+  testImage('AVIF', 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAEAAAABAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQ0MAAAAABNjb2xybmNseAACAAIABoAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgABogQEDQgMgkQAAAAB8dSLfI=');
+
+  var finalized=false;
+  function finalize(){
+    var pend = grid.getElementsByClassName('pill');
+    for (var i=0;i<pend.length;i++){ if (pend[i].innerHTML.indexOf('teste')!==-1) return; }
+    if (finalized) return; finalized=true;
+    var v = document.getElementById('verdict');
+    var ie = navigator.userAgent.indexOf('Trident')!==-1 || navigator.userAgent.indexOf('MSIE')!==-1;
+    if (ie){ v.innerHTML='Achtung: alter Internet Explorer – moderne Seiten brechen ab.'; v.style.color='#C0392B'; }
+    else if (counts.no===0){ v.innerHTML='Sehr gut – dieser Browser kann praktisch alles.'; v.style.color='#2C5E1D'; }
+    else if (counts.no<=3){ v.innerHTML='Solide – Basis laeuft, ein paar neue Sachen fehlen.'; v.style.color='#2C5E1D'; }
+    else { v.innerHTML='Aelterer Browser – konservativ bauen (rote Felder).'; v.style.color='#B8860B'; }
+  }
+  setTimeout(finalize, 3000);
+})();
+</script>
+<script>
+var TONE_WAV = 'data:audio/wav;base64,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';
+function beepWebAudio(){ var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return false; try{ var c=new AC(); var o=c.createOscillator(), g=c.createGain(); o.type='sine'; o.frequency.value=880; g.gain.value=0.2; o.connect(g); g.connect(c.destination); o.start(); setTimeout(function(){ try{o.stop();}catch(e){} if(c.close)c.close(); },300); return true; }catch(e){ return false; } }
+function playTone(){ var st=document.getElementById('soundStatus'); var started=false; try{ var a=new Audio(TONE_WAV); a.play(); started=true; }catch(e){} if(!started){ started=beepWebAudio(); } if(started){ st.innerHTML='Piep abgespielt &ndash; hoerst du ihn? Dann gibt die Tafel Ton aus.'; st.style.color='#2C5E1D'; } else { st.innerHTML='Konnte keinen Ton starten (Browser blockiert Audio).'; st.style.color='#C0392B'; } }
+</script>
+</body>
+</html>
