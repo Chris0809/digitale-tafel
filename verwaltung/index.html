@@ -82,14 +82,14 @@ a{color:var(--blue);}
     <h2 style="margin-top:0;">Deine Klasse anlegen</h2>
     <p class="muted">Einmalig: So weiß die Tafel, welche Wörter und welches Klassentier sie zeigt.</p>
     <label for="cName">Name der Klasse</label>
-    <input id="cName" type="text" placeholder="z. B. Klasse 2b">
+    <input id="cName" type="text" placeholder="z. B. Klasse 2c">
     <label for="cSlug">Kürzel für die Tafel-Adresse</label>
-    <input id="cSlug" type="text" placeholder="z. B. 2b">
-    <div class="hint">Die Tafel ruft dann <code id="slugPreview">…?klasse=2b</code> auf.</div>
+    <input id="cSlug" type="text" placeholder="z. B. 2c">
+    <div class="hint">Die Tafel ruft dann <code id="slugPreview">…?klasse=2c</code> auf.</div>
     <label for="cMascot">Gestaltung</label>
     <select id="cMascot">
       <option value="neutral" selected>Neutral – ohne Klassentier (blanko)</option>
-      <option value="pepe">Pepe (Frosch)</option>
+      <option value="pepe">Pepe</option>
     </select>
     <div class="muted" style="margin-top:6px;">Lässt sich später jederzeit umstellen.</div>
     <div class="btn-row">
@@ -106,7 +106,7 @@ a{color:var(--blue);}
         <span>Gestaltung:</span>
         <select id="mascotSelect" style="width:auto; padding:6px 10px;">
           <option value="neutral">Neutral (blanko)</option>
-          <option value="pepe">Pepe (Frosch)</option>
+          <option value="pepe">Pepe</option>
         </select>
       </div>
       <div class="hint" id="tafelLink"></div>
@@ -152,6 +152,12 @@ const TAFEL_BASE = new URL('../blitzlesen/demo.html', location.href).href;
 
 let user=null, klasse=null, editingId=null;
 
+// Beispiel-Wortliste, die jede neue Klasse automatisch bekommt (damit nichts leer startet)
+const BEISPIEL_LISTE = {
+  titel: 'Frühling & Sommer',
+  woerter: ['Früh-ling','Fe-ri-en','Schwimm-bad','Kak-tus','Som-mer','Blu-me','Schmet-ter-ling','Son-ne','Ur-laub','Fahr-rad']
+};
+
 function toast(msg, isErr){
   const t=$('toast'); t.textContent=msg; t.className='toast show'+(isErr?' err':'');
   setTimeout(()=>{ t.className='toast'; }, 2600);
@@ -191,7 +197,7 @@ async function route(){
 }
 
 /* ---------- Klasse anlegen ---------- */
-$('cSlug').addEventListener('input', ()=>{ $('slugPreview').textContent='…?klasse='+(slugify($('cSlug').value)||'2b'); });
+$('cSlug').addEventListener('input', ()=>{ $('slugPreview').textContent='…?klasse='+(slugify($('cSlug').value)||'2c'); });
 $('cName').addEventListener('input', ()=>{ if(!$('cSlug').value) $('cSlug').value = slugify($('cName').value).replace(/^klasse-?/,''); });
 $('createClassBtn').onclick = async ()=>{
   const name=$('cName').value.trim(), slug=slugify($('cSlug').value), maskottchen=$('cMascot').value;
@@ -199,7 +205,10 @@ $('createClassBtn').onclick = async ()=>{
   await sb.from('profiles').upsert({ id:user.id });
   const { data, error } = await sb.from('klassen').insert({ name, slug, maskottchen, owner:user.id }).select().single();
   if(error){ return toast(error.code==='23505' ? 'Dieses Kürzel ist schon vergeben – bitte ein anderes.' : error.message, true); }
-  klasse = data; await renderLists(); show('listsView'); toast('Klasse angelegt.');
+  klasse = data;
+  // Beispiel-Wortliste automatisch mit anlegen
+  await sb.from('wortlisten').insert({ klasse_id:klasse.id, titel:BEISPIEL_LISTE.titel, woerter:BEISPIEL_LISTE.woerter, aktiv:true });
+  await renderLists(); show('listsView'); toast('Klasse angelegt – Beispielliste „Frühling & Sommer" ist dabei.');
 };
 
 /* ---------- Wortlisten ---------- */

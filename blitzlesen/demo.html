@@ -923,15 +923,7 @@ function loadBuckets() {
     return true;
   } catch (e) { return false; }
 }
-async function seedWords() {            // Erstbefüllung: words.json, sonst Standard
-  try {
-    const r = await fetch('words.json', { cache: 'no-store' });
-    if (r.ok) {
-      const data = await r.json();
-      const w = normalizeWords(data.woerter || data.words || data);
-      if (w.length) return { name: data.titel || data.title || DEFAULT_TITLE, words: w };
-    }
-  } catch (e) {}
+function seedWords() {                   // Standard ist IMMER die gute Liste „Frühling & Sommer"
   return { name: DEFAULT_TITLE, words: DEFAULT_WORDS.map(w => w.slice()) };
 }
 /* — Cloud lesen: Wortlisten einer Klasse über ihr Kürzel (?klasse=2b).
