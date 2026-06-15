@@ -396,6 +396,22 @@
     @keyframes speechPop { 0% { transform: translateX(-50%) scale(0); } 70% { transform: translateX(-50%) scale(1.1); } 100% { transform: translateX(-50%) scale(1); } }
     @media (max-width: 680px) { .speech { width: 200px; } }
 
+    /* — Neutral-Modus: ohne Klassentier (blanko). Keine Figur, schlichte „Bereit?"-Karte. — */
+    body.neutral .pepe-idle,
+    body.neutral .pepe-char,
+    body.neutral .speech,
+    body.neutral .reward-pepe { display: none !important; }
+    .ready-neutral {
+      position: fixed; left: 50%; top: 32vh; transform: translateX(-50%);
+      z-index: 4; display: none;
+      background: #FBF6EC; border: 6px solid #54A535; border-radius: 28px;
+      padding: 16px 48px; font-family: Fredoka, system-ui, sans-serif; font-weight: 700;
+      font-size: clamp(34px, 6vw, 64px); color: #2C5E1D;
+      box-shadow: 0 8px 14px rgba(44,42,38,.12);
+      animation: speechPop .4s cubic-bezier(.17,.67,.35,1.4) both;
+    }
+    body.neutral.ruht .ready-neutral { display: block; }
+
     /* Countdown als großer Overlay-Schriftzug (NICHT in der Karte) */
     .countnum {
       position: fixed; inset: 0; z-index: 6; display: none;
@@ -717,6 +733,7 @@
     <text x="180" y="132" text-anchor="middle" font-family="Fredoka, system-ui, sans-serif" font-weight="700" font-size="64" fill="#2C5E1D">Bereit?</text>
   </svg>
 </div>
+<div class="ready-neutral" aria-hidden="true">Bereit?</div>
 <div class="countnum" id="countNum" aria-hidden="true"></div>
 
 <div class="topbar">
@@ -840,6 +857,7 @@
   </div>
 </div>
 
+<script src="../cloud-config.js"></script>
 <script>
 /* ════════════════════════════════════════════════════════════
    Wörter sind in Themen-Paketen ("Buckets") organisiert.
@@ -854,6 +872,9 @@ const DEFAULT_WORDS = [
 ];
 const LS_BUCKETS = 'blitzlesen.buckets.v1';   // [{id,name,words:[[..]]}]
 const LS_ACTIVE  = 'blitzlesen.aktiv.v1';     // id des aktiven Themas
+
+let cloudMode   = false;   // true = Wörter kommen aus der Cloud (Tafel zeigt nur an, kein lokales Speichern)
+let cloudMascot = null;    // Klassentier aus der Cloud (überschreibt die gespeicherte Auswahl)
 
 let words = DEFAULT_WORDS.slice();
 let titel = DEFAULT_TITLE;
@@ -882,6 +903,7 @@ function normalizeWords(raw) {
 
 /* — Speichern / Laden der Themen — */
 function persistBuckets() {
+  if (cloudMode) return;   // im Cloud-Modus liest die Tafel nur, sie speichert nicht lokal
   try {
     localStorage.setItem(LS_BUCKETS, JSON.stringify(buckets));
     localStorage.setItem(LS_ACTIVE, activeId || '');
@@ -912,6 +934,34 @@ async function seedWords() {            // Erstbefüllung: words.json, sonst Sta
   } catch (e) {}
   return { name: DEFAULT_TITLE, words: DEFAULT_WORDS.map(w => w.slice()) };
 }
+/* — Cloud lesen: Wortlisten einer Klasse über ihr Kürzel (?klasse=2b).
+   Nur normales fetch + REST (kein extra Skript) → tafel-kompatibel.
+   Bei Erfolg: buckets aus den aktiven Listen, Klassentier gemerkt, cloudMode=true. */
+function getKlasseSlug() {
+  try { return new URLSearchParams(location.search).get('klasse'); } catch (e) { return null; }
+}
+async function loadCloud(slug) {
+  const cfg = window.PEPE_CLOUD;
+  if (!cfg || !cfg.url || !cfg.key || !slug) return false;
+  const url = cfg.url + '/rest/v1/klassen?select=name,maskottchen,wortlisten(titel,woerter,aktiv)&slug=eq.' + encodeURIComponent(slug);
+  try {
+    const r = await fetch(url, { cache: 'no-store', headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key } });
+    if (!r.ok) return false;
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return false;
+    const k = rows[0];
+    const lists = (k.wortlisten || []).filter(l => l.aktiv);
+    const bs = lists.map(l => ({ id: uid(), name: l.titel || 'Thema', words: normalizeWords(l.woerter) }))
+                    .filter(b => b.words.length);
+    if (!bs.length) return false;
+    buckets = bs;
+    activeId = buckets[0].id;
+    cloudMascot = k.maskottchen || 'pepe';
+    cloudMode = true;
+    return true;
+  } catch (e) { return false; }
+}
+
 function applyActive() {                // aktives Thema → Spiel
   const b = buckets.find(x => x.id === activeId) || buckets[0];
   if (!b) { words = DEFAULT_WORDS.slice(); titel = DEFAULT_TITLE; return; }
@@ -964,7 +1014,15 @@ const CHARACTERS = [
 const CHAR_KEY = 'blitzlesen.charakter.v1';
 let activeChar = CHARACTERS[0];
 
+/* Neutral-Modus: blanko, ohne Klassentier. Keine Figur, keine Bilder. */
+function applyNeutral() {
+  activeChar = { id: 'neutral', name: 'Neutral' };
+  document.body.classList.add('neutral');
+  if (rewardPepeEl) { rewardPepeEl.removeAttribute('src'); rewardPepeEl.alt = ''; }
+}
+
 function applyCharacter(ch) {
+  document.body.classList.remove('neutral');
   activeChar = ch;
   const r = document.documentElement.style;
   r.setProperty('--pepe-aspect', String(ch.anchor.aspect));
@@ -989,10 +1047,11 @@ function setupCharacters() {
   charSelectEl.innerHTML = CHARACTERS.map(c => '<option value="' + c.id + '">' + c.name + '</option>').join('');
   charPillEl.style.display = CHARACTERS.length > 1 ? '' : 'none';   // Menü erst ab 2 Charakteren zeigen
   let saved = 'pepe';
-  try { saved = localStorage.getItem(CHAR_KEY) || 'pepe'; } catch (e) {}
-  const ch = CHARACTERS.find(c => c.id === saved) || CHARACTERS[0];
-  charSelectEl.value = ch.id;
-  applyCharacter(ch);
+  if (cloudMode) { saved = cloudMascot || 'neutral'; }   // Cloud bestimmt das Klassentier (ggf. neutral)
+  else { try { saved = localStorage.getItem(CHAR_KEY) || 'pepe'; } catch (e) {} }
+  const ch = CHARACTERS.find(c => c.id === saved);
+  if (ch) { charSelectEl.value = ch.id; applyCharacter(ch); }
+  else { applyNeutral(); }                                // 'neutral' oder unbekanntes Maskottchen → blanko
 }
 
 /* Gespenst-SVG (gleiche Form wie im Spiel) für die Belohnungs-Reihe */
@@ -1257,11 +1316,22 @@ document.addEventListener('keydown', e => {
 
 /* ── Start ─────────────────────────────────────────────────── */
 (async function init() {
-  if (!loadBuckets()) {
-    const seed = await seedWords();
-    buckets = [ makeBucket(seed.name, seed.words) ];
-    activeId = buckets[0].id;
-    persistBuckets();
+  const slug = getKlasseSlug();
+  let loaded = false;
+  if (slug) loaded = await loadCloud(slug);   // mit ?klasse=… zuerst aus der Cloud lesen
+  if (!loaded) {
+    // Ohne Cloud (oder Cloud nicht erreichbar): wie bisher lokal
+    if (!loadBuckets()) {
+      const seed = await seedWords();
+      buckets = [ makeBucket(seed.name, seed.words) ];
+      activeId = buckets[0].id;
+      persistBuckets();
+    }
+  }
+  if (cloudMode) {
+    // Tafel zeigt nur an: lokales Bearbeiten ausblenden (Pflege läuft über die Verwaltung)
+    const be = document.getElementById('btnEdit');
+    if (be) be.style.display = 'none';
   }
   applyActive();
   setupCharacters();       // aktiven Charakter aus der Registry anwenden (Bilder + Box/Anker)
