@@ -778,6 +778,10 @@
 
   <!-- Einstellungen: dezent im Hintergrund -->
   <div class="settings">
+    <div class="pill" id="listePill" style="display:none;">
+      <label>Liste</label>
+      <select id="listeSelect" onchange="selectListe(this.value)"></select>
+    </div>
     <div class="pill" id="charPill" style="display:none;">
       <label>Charakter</label>
       <select id="charSelect" onchange="selectCharacter(this.value)"></select>
@@ -990,6 +994,28 @@ const cardEl = $('card'), wordEl = $('word'), progressEl = $('progress'), counte
       speedEl = $('speed'), ghostCountEl = $('ghostCount'), kickerEl = $('kicker');
 const confettiEl = $('confetti'), rewardSubEl = $('rewardSub'), rewardGhostsEl = $('rewardGhosts'), countNumEl = $('countNum'),
       rewardPepeEl = $('rewardPepe'), charSelectEl = $('charSelect'), charPillEl = $('charPill');
+const listePillEl = $('listePill'), listeSelectEl = $('listeSelect');
+
+/* Listen-Auswahl auf der Tafel (nur Cloud-Modus mit mehreren Listen). */
+function setupListeSelector() {
+  if (!listePillEl) return;
+  if (!cloudMode || buckets.length < 2) { listePillEl.style.display = 'none'; return; }
+  listeSelectEl.innerHTML = '';
+  buckets.forEach(b => {
+    const o = document.createElement('option');
+    o.value = b.id; o.textContent = b.name;
+    listeSelectEl.appendChild(o);
+  });
+  listeSelectEl.value = activeId;
+  listePillEl.style.display = '';
+}
+function selectListe(id) {
+  if (!buckets.find(b => b.id === id)) return;
+  activeId = id;
+  applyActive();
+  refreshChrome();
+  reset();
+}
 
 /* ════════════════ Charakter-Registry (Pepe = Template) ═══════════
    Neuer Charakter = EIN Eintrag hier + Assets im Ordner. Kein Core-Code.
@@ -1327,6 +1353,7 @@ document.addEventListener('keydown', e => {
   }
   applyActive();
   setupCharacters();       // aktiven Charakter aus der Registry anwenden (Bilder + Box/Anker)
+  setupListeSelector();    // Listen-Auswahl (Cloud-Modus mit mehreren Listen)
   refreshChrome();
   reset();                 // gleich beim Laden den einladenden Ruhezustand zeigen
 })();

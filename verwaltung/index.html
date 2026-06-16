@@ -130,8 +130,9 @@ a{color:var(--blue);}
     <textarea id="lWords" placeholder="Schmet-ter-ling&#10;Son-ne&#10;Ra-ke-te"></textarea>
     <label style="display:flex; align-items:center; gap:8px; margin-top:12px;">
       <input id="lActive" type="checkbox" checked style="width:auto;">
-      <span>Aktiv (wird auf der Tafel angezeigt)</span>
+      <span>Auf der Tafel verfügbar</span>
     </label>
+    <div class="muted" style="margin-top:4px;">Angehakt = die Liste erscheint auf der Tafel und ist dort im Menü „Liste" auswählbar. Nicht angehakt = Entwurf, bleibt verborgen.</div>
     <div class="btn-row">
       <button id="saveListBtn" class="btn-primary" type="button">Speichern</button>
       <button id="cancelEditBtn" class="btn-ghost" type="button">Abbrechen</button>
@@ -227,7 +228,7 @@ async function renderLists(){
     const n = Array.isArray(row.woerter)? row.woerter.length : 0;
     const div=document.createElement('div'); div.className='list-item';
     div.innerHTML = '<div><div class="name">'+escapeHtml(row.titel)+'</div>'+
-      '<div class="muted">'+n+' Wörter '+(row.aktiv?'<span class="tag on">aktiv</span>':'<span class="tag off">inaktiv</span>')+'</div></div>';
+      '<div class="muted">'+n+' Wörter '+(row.aktiv?'<span class="tag on">auf der Tafel</span>':'<span class="tag off">verborgen</span>')+'</div></div>';
     const btn=document.createElement('button'); btn.className='btn-ghost'; btn.textContent='Bearbeiten';
     btn.onclick=()=>openEdit(row); div.appendChild(btn);
     c.appendChild(div);
