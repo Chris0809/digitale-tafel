@@ -48,8 +48,11 @@ h1{font-size:22px; color:#54A535; margin:0;}
 </head>
 <body>
 <div class="wrap">
-  <p style="margin:0 0 6px;"><a class="back" href="blitzlesen/demo.html">&larr; zurueck zum Blitzlesen</a></p>
-  <div class="head"><h1>Tafel-Test</h1><span class="sub">oeffnen, kurz warten, alles abfotografieren</span></div>
+  <p style="margin:0 0 6px; display:flex; gap:16px;">
+    <a class="back" id="navVerwaltung" href="verwaltung/index.html">Verwaltung</a>
+    <a class="back" id="navTafel" href="blitzlesen/demo.html">&larr; Tafel</a>
+  </p>
+  <div class="head"><h1>Gerätetest</h1><span class="sub">oeffnen, kurz warten, alles abfotografieren</span></div>
 
   <div class="top">
     <div class="flag">Das hier fotografieren</div>
@@ -68,6 +71,12 @@ h1{font-size:22px; color:#54A535; margin:0;}
   </div>
 
   <div id="grid"></div>
+
+  <p style="margin:12px 2px 0; font-size:12px; color:#5A554C;">
+    Hinweis: <b>„WebAssembly ausführen"</b> zeigt, ob Apps wie <b>WorksheetGo</b> auf dieser Tafel
+    grundsätzlich laufen. Steht dort <b>läuft NICHT</b>, ist JavaScript-JIT/WASM auf dem Gerät gesperrt –
+    dann braucht es die Schul-IT (JIT freigeben bzw. aktuellen Browser) oder ein externes Gerät per HDMI.
+  </p>
 </div>
 
 <script>
@@ -75,6 +84,12 @@ h1{font-size:22px; color:#54A535; margin:0;}
 (function(){
   var counts = { ok:0, no:0, maybe:0 };
   var grid = document.getElementById('grid');
+
+  /* Kürzel (?klasse=...) an beide Bedien-Links übernehmen, damit die Wege zur richtigen Klasse führen */
+  var _v = document.getElementById('navVerwaltung');
+  if (_v) _v.href = 'verwaltung/index.html' + location.search;
+  var _t = document.getElementById('navTafel');
+  if (_t) _t.href = 'blitzlesen/demo.html' + location.search;
 
   function updateCounts(){
     document.getElementById('counts').innerHTML =
@@ -126,6 +141,7 @@ h1{font-size:22px; color:#54A535; margin:0;}
   cell('requestAnimationFrame', ('requestAnimationFrame' in window)?'ok':'no');
   cell('fetch (Daten laden)', ('fetch' in window)?'ok':'no');
   cell('localStorage', has(function(){ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return true; })?'ok':'no');
+  cell('WebAssembly verfügbar', (typeof WebAssembly!=='undefined' && typeof WebAssembly.instantiate==='function')?'ok':'no');
 
   /* — Medien & Schrift — */
   var video = document.createElement('video');
@@ -154,6 +170,29 @@ h1{font-size:22px; color:#54A535; margin:0;}
   }
   testImage('WebP', 'data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=');
   testImage('AVIF', 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAEAAAABAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQ0MAAAAABNjb2xybmNseAACAAIABoAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgABogQEDQgMgkQAAAAB8dSLfI=');
+
+  /* — WebAssembly wirklich ausführen: genau das braucht WorksheetGo & Co. —
+     Wenn JIT/WASM auf dem Board per Richtlinie gesperrt ist, scheitert dieser Test,
+     auch wenn die Browser-Version es eigentlich könnte. */
+  (function testWasm(){
+    var div = document.createElement('div'); div.className='cell';
+    div.innerHTML = '<span class="nm">WebAssembly ausführen (WorksheetGo &amp; Co.)</span><span class="pill maybe">teste...</span>';
+    grid.appendChild(div);
+    var cellPill = div.getElementsByClassName('pill')[0], done=false;
+    function fail(){ if(done)return; done=true; counts.no++; cellPill.className='pill no'; cellPill.innerHTML='läuft NICHT'; updateCounts(); finalize(); }
+    function ok(){ if(done)return; done=true; counts.ok++; cellPill.className='pill ok'; cellPill.innerHTML='läuft'; updateCounts(); finalize(); }
+    try {
+      if (typeof WebAssembly==='undefined' || !WebAssembly.instantiate){ fail(); return; }
+      /* Mini-Modul: exportiert add(a,b)=a+b */
+      var bytes = new Uint8Array([0,97,115,109,1,0,0,0,1,7,1,96,2,127,127,1,127,3,2,1,0,7,7,1,3,97,100,100,0,0,10,9,1,7,0,32,0,32,1,106,11]);
+      var p = WebAssembly.instantiate(bytes);
+      if (p && p.then){
+        p.then(function(res){ try { (res.instance.exports.add(19,23)===42) ? ok() : fail(); } catch(e){ fail(); } },
+               function(){ fail(); });
+        setTimeout(fail, 2500);
+      } else { fail(); }
+    } catch(e){ fail(); }
+  })();
 
   var finalized=false;
   function finalize(){
