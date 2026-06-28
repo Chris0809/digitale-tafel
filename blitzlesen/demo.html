@@ -737,8 +737,7 @@
 <div class="countnum" id="countNum" aria-hidden="true"></div>
 
 <div class="topbar">
-  <a class="btn btn-ghost" href="../tafel-test.html" style="font-size:.8rem; color:var(--ink-faint);">Tafel-Test</a>
-  <button class="btn btn-ghost" id="btnEdit" onclick="openEditor()">Wörter bearbeiten</button>
+  <a class="btn btn-ghost" id="verwaltungLink" href="../verwaltung/index.html" style="font-size:.8rem; color:var(--ink-faint);">Verwaltung</a>
 </div>
 
 <div class="stage">
@@ -876,6 +875,7 @@ const DEFAULT_WORDS = [
 ];
 const LS_BUCKETS = 'blitzlesen.buckets.v1';   // [{id,name,words:[[..]]}]
 const LS_ACTIVE  = 'blitzlesen.aktiv.v1';     // id des aktiven Themas
+const LS_CLOUD_LISTE = 'blitzlesen.cloudListe.v1'; // {slug: titel} – zuletzt gewählte Cloud-Liste je Klasse
 
 let cloudMode   = false;   // true = Wörter kommen aus der Cloud (Tafel zeigt nur an, kein lokales Speichern)
 let cloudMascot = null;    // Klassentier aus der Cloud (überschreibt die gespeicherte Auswahl)
@@ -936,6 +936,19 @@ function seedWords() {                   // Standard ist IMMER die gute Liste �
 function getKlasseSlug() {
   try { return new URLSearchParams(location.search).get('klasse'); } catch (e) { return null; }
 }
+/* Zuletzt live gewählte Liste je Klasse merken (über Navigation/Reload hinweg).
+   Schlüssel = Listentitel (stabil), die Cloud-IDs werden bei jedem Laden neu vergeben. */
+function readCloudListe(slug) {
+  try { return (JSON.parse(localStorage.getItem(LS_CLOUD_LISTE) || '{}'))[slug] || null; } catch (e) { return null; }
+}
+function writeCloudListe(slug, titel) {
+  if (!slug) return;
+  try {
+    const map = JSON.parse(localStorage.getItem(LS_CLOUD_LISTE) || '{}');
+    map[slug] = titel;
+    localStorage.setItem(LS_CLOUD_LISTE, JSON.stringify(map));
+  } catch (e) {}
+}
 async function loadCloud(slug) {
   const cfg = window.PEPE_CLOUD;
   if (!cfg || !cfg.url || !cfg.key || !slug) return false;
@@ -951,7 +964,10 @@ async function loadCloud(slug) {
                     .filter(b => b.words.length);
     if (!bs.length) return false;
     buckets = bs;
-    activeId = buckets[0].id;
+    // Zuletzt gewählte Liste wiederherstellen (sonst erste aktive Liste)
+    const merktTitel = readCloudListe(slug);
+    const treffer = merktTitel ? buckets.find(b => b.name === merktTitel) : null;
+    activeId = (treffer || buckets[0]).id;
     cloudMascot = k.maskottchen || 'pepe';
     cloudMode = true;
     return true;
@@ -999,19 +1015,30 @@ const listePillEl = $('listePill'), listeSelectEl = $('listeSelect');
 /* Listen-Auswahl auf der Tafel (nur Cloud-Modus mit mehreren Listen). */
 function setupListeSelector() {
   if (!listePillEl) return;
-  if (!cloudMode || buckets.length < 2) { listePillEl.style.display = 'none'; return; }
+  if (!buckets.length) { listePillEl.style.display = 'none'; return; }
   listeSelectEl.innerHTML = '';
   buckets.forEach(b => {
     const o = document.createElement('option');
     o.value = b.id; o.textContent = b.name;
     listeSelectEl.appendChild(o);
   });
+  // Schnellzugriff: Wörter in der Verwaltung bearbeiten (letzter Eintrag)
+  const oe = document.createElement('option');
+  oe.value = '__verwaltung__'; oe.textContent = '✏️ Wörter bearbeiten …';
+  listeSelectEl.appendChild(oe);
   listeSelectEl.value = activeId;
   listePillEl.style.display = '';
 }
 function selectListe(id) {
-  if (!buckets.find(b => b.id === id)) return;
+  if (id === '__verwaltung__') {            // kein Thema, sondern Sprung in die Verwaltung
+    listeSelectEl.value = activeId;          // Auswahl optisch zurücksetzen
+    location.href = '../verwaltung/index.html' + location.search;
+    return;
+  }
+  const b = buckets.find(x => x.id === id);
+  if (!b) return;
   activeId = id;
+  if (cloudMode) writeCloudListe(getKlasseSlug(), b.name);  // Auswahl je Klasse merken
   applyActive();
   refreshChrome();
   reset();
@@ -1334,6 +1361,10 @@ document.addEventListener('keydown', e => {
 
 /* ── Start ─────────────────────────────────────────────────── */
 (async function init() {
+  // Kürzel an den Verwaltung-Link hängen, damit der Weg zur richtigen Klasse führt
+  const vl = document.getElementById('verwaltungLink');
+  if (vl) vl.href = '../verwaltung/index.html' + location.search;
+
   const slug = getKlasseSlug();
   let loaded = false;
   if (slug) loaded = await loadCloud(slug);   // mit ?klasse=… zuerst aus der Cloud lesen
@@ -1345,11 +1376,6 @@ document.addEventListener('keydown', e => {
       activeId = buckets[0].id;
       persistBuckets();
     }
-  }
-  if (cloudMode) {
-    // Tafel zeigt nur an: lokales Bearbeiten ausblenden (Pflege läuft über die Verwaltung)
-    const be = document.getElementById('btnEdit');
-    if (be) be.style.display = 'none';
   }
   applyActive();
   setupCharacters();       // aktiven Charakter aus der Registry anwenden (Bilder + Box/Anker)
