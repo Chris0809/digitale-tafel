@@ -60,7 +60,10 @@ a{color:var(--blue);}
       <h1>Pepe-Tafel · Verwaltung</h1>
       <div class="sub">Lernwörter bearbeiten – am Laptop oder Handy, mit Anmeldung.</div>
     </div>
-    <button id="logoutBtn" class="btn-ghost hidden" type="button">Abmelden</button>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <a id="headerTestLink" href="../tafel-test.html" style="display:inline-block; text-decoration:none; font-weight:600; border-radius:999px; padding:8px 14px; background:#fff; color:var(--blue-dark); border:2px solid var(--blue); font-size:13px;">Gerätetest</a>
+      <button id="logoutBtn" class="btn-ghost hidden" type="button">Abmelden</button>
+    </div>
   </header>
 
   <!-- ANMELDUNG -->
@@ -109,7 +112,11 @@ a{color:var(--blue);}
           <option value="pepe">Pepe</option>
         </select>
       </div>
-      <div class="hint" id="tafelLink"></div>
+      <div class="btn-row" style="margin-top:12px;">
+        <a id="openTafel" target="_blank" style="display:inline-block; text-decoration:none; font-weight:600; border-radius:999px; padding:10px 18px; background:var(--green); color:#fff;">Tafel öffnen</a>
+        <a id="openTest" target="_blank" style="display:inline-block; text-decoration:none; font-weight:600; border-radius:999px; padding:10px 18px; background:#fff; color:var(--blue-dark); border:2px solid var(--blue);">Gerätetest</a>
+      </div>
+      <div class="hint" id="tafelLink" style="margin-top:10px;"></div>
     </div>
 
     <div class="card">
@@ -150,6 +157,11 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const sb = createClient(window.PEPE_CLOUD.url, window.PEPE_CLOUD.key);
 const $ = (id)=>document.getElementById(id);
 const TAFEL_BASE = new URL('../blitzlesen/demo.html', location.href).href;
+const TEST_BASE  = new URL('../tafel-test.html', location.href).href;
+
+// Gerätetest ist immer erreichbar – auch ohne Login (Klassen-Kürzel mitführen)
+const _ht = $('headerTestLink');
+if (_ht) _ht.href = TEST_BASE + location.search;
 
 let user=null, klasse=null, editingId=null;
 
@@ -218,6 +230,9 @@ async function renderLists(){
   $('classSlug').textContent = klasse.slug;
   $('mascotSelect').value = klasse.maskottchen || 'neutral';
   const tafelUrl = TAFEL_BASE + '?klasse=' + encodeURIComponent(klasse.slug);
+  const testUrl  = TEST_BASE  + '?klasse=' + encodeURIComponent(klasse.slug);
+  $('openTafel').href = tafelUrl;
+  $('openTest').href  = testUrl;
   $('tafelLink').innerHTML = 'Tafel-Adresse für diese Klasse:<br><a href="'+tafelUrl+'" target="_blank">'+tafelUrl+'</a>';
 
   const { data, error } = await sb.from('wortlisten').select('*').eq('klasse_id', klasse.id).order('updated_at',{ascending:false});
